@@ -1,12 +1,13 @@
 from fastapi import FastAPI, HTTPException, Depends
-from models import products_list as ProductModel
-from database import session , engine
-import database_models
 from sqlalchemy.orm import Session
+from models import products_list as ProductModel
+from database import SessionLocal, engine, Base
+import database_models
 
 app = FastAPI()
 
-database_models.Base.metadata.create_all(bind=engine)
+# Create all tables before anything else
+Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def meet():
@@ -18,21 +19,28 @@ products = [
     ProductModel(id=2, name="leptop", desc="Leptop For Cheap", price=999.9, quantity=1),
 ]
 
+
 def get_db():
-    db = session()
+    db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-def innit_db():
-    db = session()
-    count = db.query(database_models.products_list).count()
 
-    if count == 0:  
-        for product in products:
-            db.add(database_models.products_list(**product.model_dump()))
-        db.commit()
+
+def innit_db():
+    try:
+        db = SessionLocal()
+        count = db.query(database_models.products_list).count()
+
+        if count == 0:  
+            for product in products:
+                db.add(database_models.products_list(**product.model_dump()))
+            db.commit()
+        db.close()
+    except Exception as e:
+        print(f"Error initializing database: {e}")
 
 innit_db()
 
